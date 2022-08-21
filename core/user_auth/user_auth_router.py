@@ -3,9 +3,15 @@ from core.utils.database_utils import get_db, verify_password,get_password_hash
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from core.user_auth.oauth import create_access_token,get_current_user,create_refresh_token
-from core.utils import token_utils, database_utils
+from core.utils import token_utils, database_utils, mailer_utils
 from fastapi import APIRouter, status, HTTPException,Depends
 from fastapi.encoders import jsonable_encoder
+from core.config import settings 
+
+
+
+
+frontend_url = settings.frontend_url
 
 
 auth = APIRouter(prefix = "/auth", tags=["Authentication & Authorization"])
@@ -94,3 +100,72 @@ def get_user(current_user:dict = Depends(get_current_user)):
 
 
     return current_user
+
+
+@auth.post("/invite/",status_code = status.HTTP_201_CREATED, response_model= schemas.ContractualMessageRespsonse)
+async def create_invite(invite:schemas.ContractualInvitesCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+
+    invite_check = db.query(models.ContractualInvites).filter(models.ContractualInvites.email_invited ==invite.email_invited).first()
+
+    if invite_check:
+        raise HTTPException(detail="Invite has been sent to this user.", status_code=status.HTTP_409_CONFLICT)
+    
+    invite = invite.dict()
+    invite["inviter_id"] = current_user.id
+
+    new_invite = models.ContractualInvites(**invite)
+    db.add(new_invite)
+    db.commit()
+    db.refresh(new_invite)
+
+    # await
+    token = token_utils.create_token(new_invite.email_invited) 
+    body_data = {
+        "inviter": new_invite.user.firstname,
+        "url": f"{frontend_url}/contract-user/invite/{token}/"
+    }
+    # await mailer_utils.send_mail(mail_subject="Hallo, Invite from PayBills",
+    # recipient=[new_invite.email_invited],data=body_data, template="user/new_invites.html")
+    print(body_data)
+
+    return {
+        "message": "Invite has been sent to the invited party",
+        "data": new_invite,
+        "status":status.HTTP_201_CREATED
+    }
+
+
+
+@auth.patch("/invite/{token}",status_code = status.HTTP_202_ACCEPTED)
+async def create_invite(token:str,invite:schemas.UpdateContractualInvites, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+
+    mail_invited = token_utils.invite_verify_token(token)
+
+    invite_check = db.query(models.ContractualInvites).filter(models.ContractualInvites.email_invited == mail_invited)
+
+    if not invite_check.first():
+        raise HTTPException(detail="No Invite is attched", status_code=status.HTTP_404_NOT_FOUND)
+    redirect = False
+    invite_check_ = invite_check.first()
+    invite = invite.dict(exclude_unset= True)
+    if invite["confirmation"] is True:
+        for key, values in invite.items():
+            setattr(invite_check_,key, values)
+        redirect = True
+
+    elif invite["confirmation"] is False:
+        invite_check.delete()
+    
+    # status to the person who invited.
+    db.commit()
+
+    
+
+    return {
+        "message": "Invite has been acted upon",
+        "redirect": redirect,
+        "status":status.HTTP_202_ACCEPTED
+    }
+
+
+

@@ -21,4 +21,15 @@ def verify_token(token:str):
     return token_data
     
 
+def invite_verify_token(token:str):
+    token_data = 0
+    try:
+        token_data = token_seed.loads(s=token)
 
+    except (SignatureExpired,BadSignature ,BadTimeSignature):
+        return None
+    return token_data
+    
+
+
+    

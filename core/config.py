@@ -1,5 +1,4 @@
-from curses import use_env
-from pydantic import BaseSettings
+from pydantic import BaseSettings, EmailStr
 from typing import Optional 
 
 
@@ -20,6 +19,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes:int 
     refresh_secret_key:str
     token_secret_key:str
+    frontend_url:str
     
 
     class Config:
@@ -27,10 +27,18 @@ class Settings(BaseSettings):
 
 
 
+class MailSettings(BaseSettings):
+    mail_username:str
+    mail_password: str
+    mail_server:str
+    mail_port:int
+    mail_tls: bool
+    mail_ssl:bool
+    mail_from:EmailStr
+    mail_from_name:str
 
-
-
-
+    class Config:
+        env_file = ".env"
 
 
 
@@ -50,4 +58,4 @@ class Settings(BaseSettings):
 
         
 settings:Settings = Settings() 
-# print(settings)       
+mail_settings = MailSettings()

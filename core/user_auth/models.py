@@ -14,13 +14,20 @@ class User(Base):
     phone_number = Column(String, nullable= True)
     password = Column(String, nullable=False)
     is_verified= Column(Boolean, default = False, nullable= False)
+    is_invited = Column(Boolean, default = False, nullable= False)
     super_user =  Column(Boolean, default = False, nullable= False)
     terms_of_service =  Column(Boolean, default = False, nullable= False)
     date_joined = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
     
-    
-    
-    
+class ContractualInvites(Base):
+    __tablename__ ="contractual_invites"
+    id = Column(Integer,primary_key = True,index = True)
+    inviter_id = Column(ForeignKey("users.id", ondelete="CASCADE"))
+    confirmation = Column(Boolean, server_Default = text("false"))
+    email_invited = Column(String, nullable=False, unique=True)
+    date_created = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("now()"))
+    user = relationship("users")
+
     
 # class User_KYC(Base):
 #     __tablename__ = "users-kyc"

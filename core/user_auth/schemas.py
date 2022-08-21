@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class User(BaseModel):
     email:EmailStr
@@ -67,3 +67,39 @@ class RegistrationResponse(BaseModel):
 class loginData(BaseModel):
     email: EmailStr
     password: str
+
+
+
+#INvites 
+# 
+
+class ContractualInvitesCreate(BaseModel):
+    email_invited:EmailStr
+
+
+class UpdateContractualInvites(BaseModel):
+    confirmation: bool
+    email_invited: EmailStr
+
+
+class ContractualInviteResponse(BaseModel):
+    id: int
+    inviter_id: int
+    confirmation: bool
+    email_invited: EmailStr
+
+
+    class Config:
+        orm_mode = True
+
+
+class ContractualMessageRespsonse(BaseModel):
+    message:str
+    data: ContractualInviteResponse
+    status: int
+
+
+class ContractualListMessageRespsonse(BaseModel):
+    message:str
+    data: List[ContractualInviteResponse]
+    status: int    
